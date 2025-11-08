@@ -2,13 +2,23 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+from contextlib import asynccontextmanager
 import models
 import schemas
 from database import get_db, engine
 
-models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Student Finance API", version="1.0")
+# Use lifespan instead of deprecated on_event
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🚀 Creating database tables (if not exist)...")
+    models.Base.metadata.create_all(bind=engine)
+    print("✅ Tables ready!")
+    yield  # startup done — now the app runs
+    print("🛑 Shutting down app...")
+
+
+app = FastAPI(title="Student Finance API", version="1.0", lifespan=lifespan)
 
 
 # =========================
