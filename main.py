@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware  # 👈 added
 import models
 import schemas
 from database import get_db, engine
@@ -19,6 +20,20 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Student Finance API", version="1.0", lifespan=lifespan)
+
+# ✅ Enable CORS for frontend (Next.js)
+origins = [
+    "http://localhost:3000",  # local dev frontend
+    "https://koshconnect.vercel.app",  # production (if deployed)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # can use ["*"] for testing
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # =========================
