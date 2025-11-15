@@ -16,8 +16,14 @@ class TransactionBase(BaseModel):
     status: str
     description: Optional[str] = None
 
+    # === NEW FIELDS ADDED HERE ===
+    merchant: Optional[str] = None
+    category: Optional[str] = None
+    # =============================
+
 
 class TransactionCreate(TransactionBase):
+    # This schema will now automatically accept 'merchant' and 'category'
     pass
 
 
