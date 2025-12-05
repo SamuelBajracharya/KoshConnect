@@ -80,7 +80,7 @@ class AccountWithTransactions(Account):
 # =========================
 class UserBase(BaseModel):
     username: str
-    email: str
+    phonenumber: str
     full_name: str
 
 

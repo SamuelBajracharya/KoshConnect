@@ -17,6 +17,7 @@ from security import (
     verify_password,
 )
 
+
 # Use lifespan instead of deprecated on_event
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,7 +51,9 @@ app.add_middleware(
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
-    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    user = (
+        db.query(models.User).filter(models.User.username == form_data.username).first()
+    )
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=401,
@@ -69,13 +72,13 @@ async def login_for_access_token(
 # =========================
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    db_user = db.query(models.User).filter(models.User.phonenumber == user.phonenumber).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Phone number already registered")
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
         username=user.username,
-        email=user.email,
+        phonenumber=user.phonenumber,
         full_name=user.full_name,
         hashed_password=hashed_password,
     )
@@ -105,7 +108,9 @@ def get_user_accounts(
     current_user: models.User = Depends(get_current_user),
 ):
     if current_user.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access these accounts")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access these accounts"
+        )
     db_user = db.query(models.User).filter(models.User.user_id == user_id).first()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -127,7 +132,9 @@ def get_account(
     if db_account is None:
         raise HTTPException(status_code=404, detail="Account not found")
     if db_account.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this account")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this account"
+        )
     return db_account
 
 
