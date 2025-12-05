@@ -8,9 +8,10 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from . import models, schemas
-from .database import get_db
-from .main import SECRET_KEY, ALGORITHM
+import models
+import schemas
+from database import get_db
+from config import SECRET_KEY, ALGORITHM
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

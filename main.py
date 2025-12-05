@@ -9,18 +9,13 @@ from datetime import timedelta
 import models
 import schemas
 from database import get_db, engine
+from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from security import (
     create_access_token,
     get_current_user,
     get_password_hash,
     verify_password,
 )
-
-# JWT settings
-SECRET_KEY = "your-secret-key"  # Change this in production
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 
 # Use lifespan instead of deprecated on_event
 @asynccontextmanager
