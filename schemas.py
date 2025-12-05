@@ -5,6 +5,18 @@ from datetime import datetime
 
 
 # =========================
+# Token Schemas
+# =========================
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+
+# =========================
 # Transaction Schemas
 # =========================
 class TransactionBase(BaseModel):
@@ -67,12 +79,13 @@ class AccountWithTransactions(Account):
 # User Schemas
 # =========================
 class UserBase(BaseModel):
+    username: str
     email: str
     full_name: str
 
 
 class UserCreate(UserBase):
-    pass
+    password: str
 
 
 class User(UserBase):
