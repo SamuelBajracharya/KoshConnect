@@ -21,11 +21,11 @@ from security import (
 # Use lifespan instead of deprecated on_event
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Creating database tables (if not exist)...")
+    print("Creating database tables (if not exist)...")
     models.Base.metadata.create_all(bind=engine)
-    print("✅ Tables ready!")
+    print("Tables ready!")
     yield  # startup done — now the app runs
-    print("🛑 Shutting down app...")
+    print("Shutting down app...")
 
 
 app = FastAPI(title="Student Finance API", version="1.0", lifespan=lifespan)
@@ -44,9 +44,7 @@ app.add_middleware(
 )
 
 
-# =========================
 # AUTHENTICATION ROUTES
-# =========================
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
@@ -67,9 +65,7 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# =========================
 # USER ROUTES
-# =========================
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.phonenumber == user.phonenumber).first()
@@ -117,9 +113,7 @@ def get_user_accounts(
     return db_user.accounts
 
 
-# =========================
 # ACCOUNT ROUTES
-# =========================
 @app.get("/accounts/{account_id}", response_model=schemas.AccountWithTransactions)
 def get_account(
     account_id: UUID,
@@ -158,9 +152,7 @@ def get_account_transactions(
     return db_account.transactions
 
 
-# =========================
 # TRANSACTION ROUTES
-# =========================
 @app.get("/transactions/{transaction_id}", response_model=schemas.Transaction)
 def get_transaction(
     transaction_id: UUID,
