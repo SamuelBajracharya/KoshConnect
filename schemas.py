@@ -11,7 +11,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    sub: Optional[str] = None  # <-- FIXED: matches your JWT payload key
+    phonenumber: Optional[str] = None
 
 
 # Transaction Schemas
