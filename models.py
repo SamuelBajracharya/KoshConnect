@@ -18,8 +18,14 @@ class User(Base):
     )
 
     accounts = relationship(
-        "Account", back_populates="owner", cascade="all, delete-orphan"
+        "Account",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
+
+    def __repr__(self):
+        return f"<User {self.username}>"
 
 
 class Account(Base):
@@ -37,9 +43,16 @@ class Account(Base):
     balance = Column(Numeric(12, 2), nullable=False)
 
     owner = relationship("User", back_populates="accounts")
+
     transactions = relationship(
-        "Transaction", back_populates="account", cascade="all, delete-orphan"
+        "Transaction",
+        back_populates="account",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
+
+    def __repr__(self):
+        return f"<Account {self.bank_name} • {self.account_number_masked}>"
 
 
 class Transaction(Base):
@@ -54,11 +67,15 @@ class Transaction(Base):
     date = Column(DateTime(timezone=True), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(3), nullable=False)
-    type = Column(String(10), nullable=False)  # e.g., DEBIT, CREDIT
-    status = Column(String(15), nullable=False)  # e.g., COMPLETED, PENDING
-    description = Column(String)
+    type = Column(String(10), nullable=False)  # "DEBIT" or "CREDIT"
+    status = Column(String(15), nullable=False)  # "COMPLETED" or "PENDING"
+    description = Column(String, nullable=True)
 
-    merchant = Column(String, nullable=True)  # e.g., "Starbucks", "Big Mart"
-    category = Column(String, nullable=True)  # e.g., "Food", "Transport"
+    # Optional fields
+    merchant = Column(String, nullable=True)
+    category = Column(String, nullable=True)
 
     account = relationship("Account", back_populates="transactions")
+
+    def __repr__(self):
+        return f"<Transaction {self.amount} {self.currency} - {self.type}>"

@@ -1,24 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, constr
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 
 
-# =========================
 # Token Schemas
-# =========================
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
+    sub: Optional[str] = None  # <-- FIXED: matches your JWT payload key
 
 
-# =========================
 # Transaction Schemas
-# =========================
 class TransactionBase(BaseModel):
     account_id: UUID
     date: datetime
@@ -28,14 +24,11 @@ class TransactionBase(BaseModel):
     status: str
     description: Optional[str] = None
 
-    # === NEW FIELDS ADDED HERE ===
     merchant: Optional[str] = None
     category: Optional[str] = None
-    # =============================
 
 
 class TransactionCreate(TransactionBase):
-    # This schema will now automatically accept 'merchant' and 'category'
     pass
 
 
@@ -46,9 +39,7 @@ class Transaction(TransactionBase):
         from_attributes = True
 
 
-# =========================
 # Account Schemas
-# =========================
 class AccountBase(BaseModel):
     user_id: UUID
     bank_name: str
@@ -69,15 +60,13 @@ class Account(AccountBase):
 
 
 class AccountWithTransactions(Account):
-    transactions: List[Transaction] = []
+    transactions: List[Transaction] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
 
 
-# =========================
 # User Schemas
-# =========================
 class UserBase(BaseModel):
     username: str
     phonenumber: str
@@ -85,13 +74,21 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str
+    # bcrypt supports only up to 72 bytes
+    password: constr(max_length=72)
 
 
 class User(UserBase):
     user_id: UUID
     created_at: datetime
-    accounts: List[Account] = []
+    accounts: List[Account] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
+
+
+# =========================
+# Login Response Schemas
+# =========================
+class LoginResponse(Token):
+    accounts: List[Account] = Field(default_factory=list)

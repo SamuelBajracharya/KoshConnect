@@ -1,18 +1,3 @@
--- Hyper-realistic 1-Year Transaction Data for Persona: BIKESH_KTM_STUDENT
--- Generated on: 2025-11-15T21:26:47.586766
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-DROP TABLE IF EXISTS Transactions;
-DROP TABLE IF EXISTS Accounts;
-DROP TABLE IF EXISTS Users;
-
--- 1) CREATE TABLES
-CREATE TABLE Users (
-    user_id UUID PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    full_name TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 
 CREATE TABLE Accounts (
     account_id UUID PRIMARY KEY,
@@ -37,7 +22,6 @@ CREATE TABLE Transactions (
 );
 
 -- 2) Insert persona (user + account)
-INSERT INTO Users (user_id, email, full_name, created_at) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'bikesh.maharjan@student.example.com', 'Bikesh Maharjan', '2025-01-01T10:00:00Z');
 INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'b2a1c3d4-e5f6-7788-9900-aabbccddeeff', 'Nabil Bank', '**** 1234', 'Student Savings (Allowance)', 15000.00);
 INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'c3d4e5f6-a1b2-7788-9900-aabbccddeeff', 'eSewa Bank', '**** 5678', 'Freelancer (Gig Money)', 10000.00);
 
