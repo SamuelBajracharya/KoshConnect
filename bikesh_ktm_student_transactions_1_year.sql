@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE Accounts (
     account_id UUID PRIMARY KEY,

@@ -1,43 +1,7 @@
 -- Hyper-realistic 1-Year Transaction Data for Persona: PRIYA_BANK_MANAGER
 -- Generated on: 2025-11-15T21:43:09.325385
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-DROP TABLE IF EXISTS Transactions;
-DROP TABLE IF EXISTS Accounts;
-DROP TABLE IF EXISTS Users;
-
--- 1) CREATE TABLES
-CREATE TABLE Users (
-    user_id UUID PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    full_name TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE Accounts (
-    account_id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES Users(user_id),
-    bank_name TEXT NOT NULL,
-    account_number_masked TEXT NOT NULL,
-    account_type TEXT NOT NULL,
-    balance DECIMAL(12,2) NOT NULL
-);
-
-CREATE TABLE Transactions (
-    transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID NOT NULL REFERENCES Accounts(account_id),
-    date TIMESTAMPTZ NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    currency VARCHAR(3) NOT NULL,
-    type VARCHAR(10) NOT NULL,
-    status VARCHAR(15) NOT NULL,
-    description TEXT,
-    merchant TEXT,
-    category TEXT
-);
 
 -- 2) Insert persona (user + account)
-INSERT INTO Users (user_id, email, full_name, created_at) VALUES ('d1e2f3a4-b5c6-47d8-a9b0-c1d2e3f4a5b6', 'priya.shrestha@bank.com', 'Priya Shrestha', '2025-01-01T10:00:00Z');
 INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('d1e2f3a4-b5c6-47d8-a9b0-c1d2e3f4a5b6', 'a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c7', 'NMB Bank', '**** 1122', 'Salary Account', 80000.00);
 INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('d1e2f3a4-b5c6-47d8-a9b0-c1d2e3f4a5b6', 'b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6', 'eSewa', '98********', 'Digital Wallet', 10000.00);
 

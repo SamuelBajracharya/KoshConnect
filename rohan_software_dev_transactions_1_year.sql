@@ -1,7 +1,6 @@
 
 
 -- 2) Insert persona (user + account)
-INSERT INTO Users (user_id, email, full_name, created_at) VALUES ('e4a5b6c7-d8e9-40a1-a2c3-d4e5f6a7b8c9', 'rohan.pradhan@techcompany.com', 'Rohan Pradhan', '2025-01-01T10:00:00Z');
 INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('e4a5b6c7-d8e9-40a1-a2c3-d4e5f6a7b8c9', 'f1a2b3c4-d5e6-47f8-89a0-b1c2d3e4f5a6', 'NIC Asia Bank', '**** 9876', 'Salary Account', 75000.00);
 INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('e4a5b6c7-d8e9-40a1-a2c3-d4e5f6a7b8c9', 'a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6', 'Khalti', '98********', 'Digital Wallet', 5000.00);
 
