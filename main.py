@@ -6,9 +6,10 @@ from uuid import UUID
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
+from decimal import Decimal
 import models
 import schemas
-from database import get_db, engine
+from database import get_db, engine, SessionLocal
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from security import (
     create_access_token,
@@ -18,12 +19,105 @@ from security import (
 )
 
 
+# Approximate market snapshot for mock use (as of 2026-02-21)
+MARKET_DUMMY_STOCKS = [
+    {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "current_price": "228.90",
+        "currency": "USD",
+    },
+    {
+        "symbol": "MSFT",
+        "name": "Microsoft Corporation",
+        "current_price": "436.10",
+        "currency": "USD",
+    },
+    {
+        "symbol": "GOOGL",
+        "name": "Alphabet Inc. Class A",
+        "current_price": "186.75",
+        "currency": "USD",
+    },
+    {
+        "symbol": "AMZN",
+        "name": "Amazon.com, Inc.",
+        "current_price": "204.35",
+        "currency": "USD",
+    },
+    {
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "current_price": "965.20",
+        "currency": "USD",
+    },
+    {
+        "symbol": "TSLA",
+        "name": "Tesla, Inc.",
+        "current_price": "242.40",
+        "currency": "USD",
+    },
+]
+
+
+def seed_stock_instruments(db: Session):
+    users = db.query(models.User).all()
+    if not users:
+        return
+
+    quantity_templates = ["3.500000", "7.000000", "1.250000", "4.000000"]
+    buy_multipliers = ["0.87", "0.93", "1.05", "1.12"]
+
+    for user_index, user in enumerate(users):
+        user_id_str = str(user.user_id)
+        existing_symbols = {
+            row.symbol
+            for row in db.query(models.StockInstrument.symbol)
+            .filter(models.StockInstrument.user_id == user_id_str)
+            .all()
+        }
+
+        # Rotate the market list so different users get different mixes
+        offset = user_index % len(MARKET_DUMMY_STOCKS)
+        assigned = (MARKET_DUMMY_STOCKS[offset:] + MARKET_DUMMY_STOCKS[:offset])[:4]
+
+        for stock_index, stock in enumerate(assigned):
+            if stock["symbol"] in existing_symbols:
+                continue
+
+            current_price = Decimal(stock["current_price"])
+            avg_multiplier = Decimal(buy_multipliers[stock_index])
+            quantity = Decimal(quantity_templates[stock_index])
+
+            db.add(
+                models.StockInstrument(
+                    user_id=user_id_str,
+                    symbol=stock["symbol"],
+                    name=stock["name"],
+                    quantity=quantity,
+                    average_buy_price=(current_price * avg_multiplier),
+                    current_price=current_price,
+                    currency=stock["currency"],
+                )
+            )
+
+    db.commit()
+
+
 # Use lifespan instead of deprecated on_event
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Creating database tables (if not exist)...")
     models.Base.metadata.create_all(bind=engine)
     print("Tables ready!")
+
+    db = SessionLocal()
+    try:
+        seed_stock_instruments(db)
+        print("Stock instruments seeded (if missing).")
+    finally:
+        db.close()
+
     yield  # startup done — now the app runs
     print("Shutting down app...")
 
@@ -189,6 +283,54 @@ def get_transaction(
             status_code=403, detail="Not authorized to access this transaction"
         )
     return db_transaction
+
+
+@app.get("/users/{user_id}/stocks", response_model=List[schemas.StockInstrument])
+def get_user_stocks(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access stocks")
+
+    return (
+        db.query(models.StockInstrument)
+        .filter(models.StockInstrument.user_id == str(user_id))
+        .order_by(models.StockInstrument.symbol.asc())
+        .all()
+    )
+
+
+@app.post("/stocks/", response_model=schemas.StockInstrument)
+def add_stock_instrument(
+    stock: schemas.StockInstrumentCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if stock.user_id != str(current_user.user_id):
+        raise HTTPException(
+            status_code=403, detail="Not authorized to add stock for this user"
+        )
+
+    exists = (
+        db.query(models.StockInstrument)
+        .filter(
+            models.StockInstrument.user_id == stock.user_id,
+            models.StockInstrument.symbol == stock.symbol,
+        )
+        .first()
+    )
+    if exists:
+        raise HTTPException(
+            status_code=400, detail="Stock symbol already exists for this user"
+        )
+
+    db_stock = models.StockInstrument(**stock.dict())
+    db.add(db_stock)
+    db.commit()
+    db.refresh(db_stock)
+    return db_stock
 
 
 @app.post("/transactions/", response_model=schemas.Transaction)

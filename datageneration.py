@@ -30,6 +30,11 @@ PERSONA_DEFINITIONS = {
                 "balance": 10000,
             },
         ],
+        "stock_holdings": [
+            ("AAPL", "Apple Inc.", 2.750000, 205.50, 228.90, "USD"),
+            ("MSFT", "Microsoft Corporation", 1.400000, 390.20, 436.10, "USD"),
+            ("NVDA", "NVIDIA Corporation", 0.850000, 810.00, 965.20, "USD"),
+        ],
         "income": [
             # (day_of_month, account_id_key, merchant, desc, amount_range)
             (1, "accounts.0.id", "Family", "Monthly Allowance", (15000, 15000)),
@@ -164,6 +169,12 @@ PERSONA_DEFINITIONS = {
                 "type": "Digital Wallet",
                 "balance": 5000,
             },
+        ],
+        "stock_holdings": [
+            ("AAPL", "Apple Inc.", 5.000000, 198.00, 228.90, "USD"),
+            ("GOOGL", "Alphabet Inc. Class A", 4.500000, 170.40, 186.75, "USD"),
+            ("AMZN", "Amazon.com, Inc.", 7.200000, 177.90, 204.35, "USD"),
+            ("MSFT", "Microsoft Corporation", 2.800000, 401.80, 436.10, "USD"),
         ],
         "income": [
             # (day_of_month, account_id_key, merchant, desc, amount_range)
@@ -330,6 +341,12 @@ PERSONA_DEFINITIONS = {
                 "balance": 10000,
             },
         ],
+        "stock_holdings": [
+            ("TSLA", "Tesla, Inc.", 3.200000, 215.00, 242.40, "USD"),
+            ("AAPL", "Apple Inc.", 4.100000, 201.25, 228.90, "USD"),
+            ("NVDA", "NVIDIA Corporation", 1.100000, 845.00, 965.20, "USD"),
+            ("AMZN", "Amazon.com, Inc.", 3.700000, 182.00, 204.35, "USD"),
+        ],
         "income": [
             # (day_of_month, account_id_key, merchant, desc, amount_range)
             (28, "accounts.0.id", "NMB Bank", "Monthly Salary", (70000, 70000))
@@ -478,10 +495,24 @@ def write_transaction(
     # Escape single quotes in descriptions/merchants
     desc_sql = desc.replace("'", "''")
     merchant_sql = merchant.replace("'", "''")
+    transaction_id = str(uuid.uuid4())
     f.write(
-        f"INSERT INTO Transactions (account_id, date, amount, currency, type, status, description, merchant, category) VALUES ('{account_id}', '{date_str}', {amount_str}, 'NPR', '{type}', 'COMPLETED', '{desc_sql}', '{merchant_sql}', '{category}');\n"
+        f"INSERT INTO transactions (transaction_id, account_id, date, amount, currency, type, status, description, merchant, category) VALUES ('{transaction_id}', '{account_id}', '{date_str}', {amount_str}, 'NPR', '{type}', 'COMPLETED', '{desc_sql}', '{merchant_sql}', '{category}');\n"
     )
     return 1  # Return 1 to count the transaction
+
+
+def write_stock_instrument(
+    f, user_id, symbol, name, quantity, average_buy_price, current_price, currency
+):
+    symbol_sql = symbol.replace("'", "''")
+    name_sql = name.replace("'", "''")
+    currency_sql = currency.replace("'", "''")
+    stock_id = str(uuid.uuid4())
+    f.write(
+        "INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) "
+        f"VALUES ('{stock_id}', '{user_id}', '{symbol_sql}', '{name_sql}', {quantity:.6f}, {average_buy_price:.6f}, {current_price:.6f}, '{currency_sql}');\n"
+    )
 
 
 def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
@@ -503,20 +534,26 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
     # --- Write SQL Header ---
     f.write(f"-- Hyper-realistic 1-Year Transaction Data for Persona: {persona_name}\n")
     f.write(f"-- Generated on: {datetime.now().isoformat()}\n")
-    f.write('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";\n\n')
-    f.write(
-        "DROP TABLE IF EXISTS Transactions;\nDROP TABLE IF EXISTS Accounts;\nDROP TABLE IF EXISTS Users;\n\n"
-    )
+    f.write("\n")
 
     f.write("-- 1) CREATE TABLES\n")
     f.write(
-        "CREATE TABLE Users (\n    user_id UUID PRIMARY KEY,\n    email TEXT NOT NULL UNIQUE,\n    full_name TEXT NOT NULL,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n"
+        "CREATE TABLE IF NOT EXISTS users (\n    user_id UUID PRIMARY KEY,\n    username VARCHAR NOT NULL UNIQUE,\n    phonenumber VARCHAR NOT NULL UNIQUE,\n    full_name VARCHAR NOT NULL,\n    hashed_password VARCHAR NOT NULL,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n"
     )
     f.write(
-        "CREATE TABLE Accounts (\n    account_id UUID PRIMARY KEY,\n    user_id UUID NOT NULL REFERENCES Users(user_id),\n    bank_name TEXT NOT NULL,\n    account_number_masked TEXT NOT NULL,\n    account_type TEXT NOT NULL,\n    balance DECIMAL(12,2) NOT NULL\n);\n\n"
+        "CREATE TABLE IF NOT EXISTS accounts (\n    account_id UUID PRIMARY KEY,\n    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,\n    bank_name VARCHAR NOT NULL,\n    account_number_masked VARCHAR NOT NULL,\n    account_type VARCHAR NOT NULL,\n    balance NUMERIC(12,2) NOT NULL\n);\n\n"
     )
     f.write(
-        "CREATE TABLE Transactions (\n    transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n    account_id UUID NOT NULL REFERENCES Accounts(account_id),\n    date TIMESTAMPTZ NOT NULL,\n    amount DECIMAL(10,2) NOT NULL,\n    currency VARCHAR(3) NOT NULL,\n    type VARCHAR(10) NOT NULL,\n    status VARCHAR(15) NOT NULL,\n    description TEXT,\n    merchant TEXT,\n    category TEXT\n);\n\n"
+        "CREATE TABLE IF NOT EXISTS transactions (\n    transaction_id UUID PRIMARY KEY,\n    account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,\n    date TIMESTAMPTZ NOT NULL,\n    amount NUMERIC(10,2) NOT NULL,\n    currency VARCHAR(3) NOT NULL,\n    type VARCHAR(10) NOT NULL,\n    status VARCHAR(15) NOT NULL,\n    description VARCHAR,\n    merchant VARCHAR,\n    category VARCHAR\n);\n\n"
+    )
+    f.write(
+        "CREATE TABLE IF NOT EXISTS stock_instruments (\n    id UUID PRIMARY KEY,\n    user_id VARCHAR(64) NOT NULL,\n    symbol VARCHAR(20) NOT NULL,\n    name VARCHAR(255),\n    quantity NUMERIC(18,6) NOT NULL DEFAULT 0,\n    average_buy_price NUMERIC(18,6),\n    current_price NUMERIC(18,6),\n    currency VARCHAR(10),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    CONSTRAINT uq_stock_instruments_user_id_id UNIQUE (user_id, id),\n    CONSTRAINT uq_stock_instruments_user_id_symbol UNIQUE (user_id, symbol)\n);\n\n"
+    )
+
+    f.write(
+        "CREATE INDEX IF NOT EXISTS ix_users_username ON users (username);\n"
+        "CREATE INDEX IF NOT EXISTS ix_users_phonenumber ON users (phonenumber);\n"
+        "CREATE INDEX IF NOT EXISTS ix_stock_instruments_user_id ON stock_instruments (user_id);\n\n"
     )
 
     f.write("-- 2) Insert persona (user + account)\n")
@@ -524,8 +561,19 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
     # --- THIS IS THE FIXED LINE ---
     start_timestamp_str = f"{start_date.strftime('%Y-%m-%d')}T10:00:00Z"
+    username = user.get("username") or user["email"].split("@")[0]
+    if len(username) > 32:
+        username = username[:32]
+
+    phone_number_seed = int(uuid.UUID(user["id"]).int % 100000000)
+    phonenumber = user.get("phonenumber") or f"98{phone_number_seed:08d}"
+    hashed_password = user.get(
+        "hashed_password",
+        "$2b$12$PsoHAtQzRQeGTzRGFj06ge64vKnjHRcIzmkJgTY3VouoMVTRO5Pyy",
+    )
+
     f.write(
-        f"INSERT INTO Users (user_id, email, full_name, created_at) VALUES ('{user['id']}', '{user['email']}', '{user['name']}', '{start_timestamp_str}');\n"
+        f"INSERT INTO users (user_id, username, phonenumber, full_name, hashed_password, created_at) VALUES ('{user['id']}', '{username}', '{phonenumber}', '{user['name']}', '{hashed_password}', '{start_timestamp_str}') ON CONFLICT (user_id) DO NOTHING;\n"
     )
     # -----------------------------
 
@@ -536,10 +584,25 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
     for acc in persona["accounts"]:
         f.write(
-            f"INSERT INTO Accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('{user['id']}', '{acc['id']}', '{acc['bank']}', '{acc['mask']}', '{acc['type']}', {acc['balance']:.2f});\n"
+            f"INSERT INTO accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('{user['id']}', '{acc['id']}', '{acc['bank']}', '{acc['mask']}', '{acc['type']}', {acc['balance']:.2f}) ON CONFLICT (account_id) DO NOTHING;\n"
         )
 
-    f.write("\n-- 3) TRANSACTIONS (1 Year)\n")
+    f.write("\n-- 3) STOCK HOLDINGS\n")
+    for symbol, name, quantity, avg_buy, current_price, currency in persona.get(
+        "stock_holdings", []
+    ):
+        write_stock_instrument(
+            f,
+            user["id"],
+            symbol,
+            name,
+            quantity,
+            avg_buy,
+            current_price,
+            currency,
+        )
+
+    f.write("\n-- 4) TRANSACTIONS (1 Year)\n")
 
     # --- Generate Transaction Loop ---
     current_date = start_date
@@ -617,7 +680,7 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
         current_date += timedelta(days=1)
         day_count += 1
 
-    # --- 4. Write to File ---
+    # --- 5. Write to File ---
     try:
         with open(output_file, "w", encoding="utf-8") as sql_file:
             sql_file.write(f.getvalue())
