@@ -5,7 +5,7 @@ from typing import List
 from uuid import UUID
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import timedelta
+from datetime import timedelta, timezone
 from decimal import Decimal
 import models
 import schemas
@@ -331,6 +331,59 @@ def add_stock_instrument(
     db.commit()
     db.refresh(db_stock)
     return db_stock
+
+
+@app.get("/stock-instruments")
+def get_stock_instruments(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    db_stocks = (
+        db.query(models.StockInstrument)
+        .filter(models.StockInstrument.user_id == str(current_user.user_id))
+        .order_by(models.StockInstrument.symbol.asc())
+        .all()
+    )
+
+    stock_instruments = []
+    for stock in db_stocks:
+        updated_at = stock.updated_at
+        if updated_at is not None:
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=timezone.utc)
+            updated_at_str = (
+                updated_at.astimezone(timezone.utc)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+        else:
+            updated_at_str = None
+
+        stock_instruments.append(
+            {
+                "instrument_id": str(stock.id),
+                "symbol": stock.symbol,
+                "name": stock.name,
+                "quantity": (
+                    float(stock.quantity) if stock.quantity is not None else None
+                ),
+                "average_buy_price": (
+                    float(stock.average_buy_price)
+                    if stock.average_buy_price is not None
+                    else None
+                ),
+                "current_price": (
+                    float(stock.current_price)
+                    if stock.current_price is not None
+                    else None
+                ),
+                "currency": stock.currency,
+                "updated_at": updated_at_str,
+            }
+        )
+
+    return {"stock_instruments": stock_instruments}
 
 
 @app.post("/transactions/", response_model=schemas.Transaction)
