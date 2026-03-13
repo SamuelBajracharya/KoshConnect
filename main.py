@@ -19,43 +19,43 @@ from security import (
 )
 
 
-# Approximate market snapshot for mock use (as of 2026-02-21)
+# Approximate NEPSE market snapshot for mock use (as of 2026-03-14)
 MARKET_DUMMY_STOCKS = [
     {
-        "symbol": "AAPL",
-        "name": "Apple Inc.",
-        "current_price": "228.90",
-        "currency": "USD",
+        "symbol": "NABIL",
+        "name": "Nabil Bank Limited",
+        "current_price": "645.00",
+        "currency": "NPR",
     },
     {
-        "symbol": "MSFT",
-        "name": "Microsoft Corporation",
-        "current_price": "436.10",
-        "currency": "USD",
+        "symbol": "NICA",
+        "name": "NIC Asia Bank Limited",
+        "current_price": "522.50",
+        "currency": "NPR",
     },
     {
-        "symbol": "GOOGL",
-        "name": "Alphabet Inc. Class A",
-        "current_price": "186.75",
-        "currency": "USD",
+        "symbol": "SCB",
+        "name": "Standard Chartered Bank Nepal Limited",
+        "current_price": "610.75",
+        "currency": "NPR",
     },
     {
-        "symbol": "AMZN",
-        "name": "Amazon.com, Inc.",
-        "current_price": "204.35",
-        "currency": "USD",
+        "symbol": "CHCL",
+        "name": "Chilime Hydropower Company Limited",
+        "current_price": "558.20",
+        "currency": "NPR",
     },
     {
-        "symbol": "NVDA",
-        "name": "NVIDIA Corporation",
-        "current_price": "965.20",
-        "currency": "USD",
+        "symbol": "UPPER",
+        "name": "Upper Tamakoshi Hydropower Limited",
+        "current_price": "332.40",
+        "currency": "NPR",
     },
     {
-        "symbol": "TSLA",
-        "name": "Tesla, Inc.",
-        "current_price": "242.40",
-        "currency": "USD",
+        "symbol": "NTC",
+        "name": "Nepal Doorsanchar Company Limited",
+        "current_price": "910.00",
+        "currency": "NPR",
     },
 ]
 
@@ -67,9 +67,17 @@ def seed_stock_instruments(db: Session):
 
     quantity_templates = ["3.500000", "7.000000", "1.250000", "4.000000"]
     buy_multipliers = ["0.87", "0.93", "1.05", "1.12"]
+    nepse_symbols = {stock["symbol"] for stock in MARKET_DUMMY_STOCKS}
 
     for user_index, user in enumerate(users):
         user_id_str = str(user.user_id)
+
+        # Keep holdings Nepal-focused by removing any legacy non-NEPSE symbols.
+        db.query(models.StockInstrument).filter(
+            models.StockInstrument.user_id == user_id_str,
+            ~models.StockInstrument.symbol.in_(nepse_symbols),
+        ).delete(synchronize_session=False)
+
         existing_symbols = {
             row.symbol
             for row in db.query(models.StockInstrument.symbol)

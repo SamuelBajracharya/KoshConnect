@@ -31,9 +31,16 @@ PERSONA_DEFINITIONS = {
             },
         ],
         "stock_holdings": [
-            ("AAPL", "Apple Inc.", 2.750000, 205.50, 228.90, "USD"),
-            ("MSFT", "Microsoft Corporation", 1.400000, 390.20, 436.10, "USD"),
-            ("NVDA", "NVIDIA Corporation", 0.850000, 810.00, 965.20, "USD"),
+            ("NABIL", "Nabil Bank Limited", 35.750000, 598.00, 645.00, "NPR"),
+            ("NICA", "NIC Asia Bank Limited", 42.000000, 486.50, 522.50, "NPR"),
+            (
+                "UPPER",
+                "Upper Tamakoshi Hydropower Limited",
+                80.000000,
+                305.00,
+                332.40,
+                "NPR",
+            ),
         ],
         "income": [
             # (day_of_month, account_id_key, merchant, desc, amount_range)
@@ -171,10 +178,31 @@ PERSONA_DEFINITIONS = {
             },
         ],
         "stock_holdings": [
-            ("AAPL", "Apple Inc.", 5.000000, 198.00, 228.90, "USD"),
-            ("GOOGL", "Alphabet Inc. Class A", 4.500000, 170.40, 186.75, "USD"),
-            ("AMZN", "Amazon.com, Inc.", 7.200000, 177.90, 204.35, "USD"),
-            ("MSFT", "Microsoft Corporation", 2.800000, 401.80, 436.10, "USD"),
+            ("NABIL", "Nabil Bank Limited", 60.000000, 602.00, 645.00, "NPR"),
+            (
+                "SCB",
+                "Standard Chartered Bank Nepal Limited",
+                32.500000,
+                570.00,
+                610.75,
+                "NPR",
+            ),
+            (
+                "CHCL",
+                "Chilime Hydropower Company Limited",
+                75.000000,
+                520.00,
+                558.20,
+                "NPR",
+            ),
+            (
+                "NTC",
+                "Nepal Doorsanchar Company Limited",
+                18.000000,
+                845.00,
+                910.00,
+                "NPR",
+            ),
         ],
         "income": [
             # (day_of_month, account_id_key, merchant, desc, amount_range)
@@ -342,10 +370,31 @@ PERSONA_DEFINITIONS = {
             },
         ],
         "stock_holdings": [
-            ("TSLA", "Tesla, Inc.", 3.200000, 215.00, 242.40, "USD"),
-            ("AAPL", "Apple Inc.", 4.100000, 201.25, 228.90, "USD"),
-            ("NVDA", "NVIDIA Corporation", 1.100000, 845.00, 965.20, "USD"),
-            ("AMZN", "Amazon.com, Inc.", 3.700000, 182.00, 204.35, "USD"),
+            (
+                "SCB",
+                "Standard Chartered Bank Nepal Limited",
+                28.000000,
+                568.00,
+                610.75,
+                "NPR",
+            ),
+            ("NICA", "NIC Asia Bank Limited", 36.500000, 490.00, 522.50, "NPR"),
+            (
+                "NTC",
+                "Nepal Doorsanchar Company Limited",
+                22.000000,
+                860.00,
+                910.00,
+                "NPR",
+            ),
+            (
+                "CHCL",
+                "Chilime Hydropower Company Limited",
+                44.000000,
+                525.00,
+                558.20,
+                "NPR",
+            ),
         ],
         "income": [
             # (day_of_month, account_id_key, merchant, desc, amount_range)
