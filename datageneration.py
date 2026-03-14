@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import uuid
 import io
 import time
+import argparse
 
 # --- 1. DEFINE PERSONAS ---
 # This is the "brain" of the generator. You can add new personas here.
@@ -13,6 +14,7 @@ PERSONA_DEFINITIONS = {
             "id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
             "email": "bikesh.maharjan@student.example.com",
             "name": "Bikesh Maharjan",
+            "hashed_password": "$2b$12$o9rF2IB.MHIqRAlwTuqcUeX3F9PUz/8Vs8a7mPRZRDlS1xV9QsqIS",
         },
         "accounts": [
             {
@@ -551,19 +553,6 @@ def write_transaction(
     return 1  # Return 1 to count the transaction
 
 
-def write_stock_instrument(
-    f, user_id, symbol, name, quantity, average_buy_price, current_price, currency
-):
-    symbol_sql = symbol.replace("'", "''")
-    name_sql = name.replace("'", "''")
-    currency_sql = currency.replace("'", "''")
-    stock_id = str(uuid.uuid4())
-    f.write(
-        "INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) "
-        f"VALUES ('{stock_id}', '{user_id}', '{symbol_sql}', '{name_sql}', {quantity:.6f}, {average_buy_price:.6f}, {current_price:.6f}, '{currency_sql}');\n"
-    )
-
-
 def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
     """
     Main generation function.
@@ -575,7 +564,16 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
         return
 
     persona = definitions[persona_name]
-    output_file = f"{persona_name.lower()}_transactions_1_year.sql"
+    if (
+        start_date.month == 1
+        and start_date.day == 1
+        and end_date.month == 12
+        and end_date.day == 31
+        and start_date.year == end_date.year
+    ):
+        output_file = f"{persona_name.lower()}_transactions_{start_date.year}.sql"
+    else:
+        output_file = f"{persona_name.lower()}_transactions_{start_date:%Y%m%d}_{end_date:%Y%m%d}.sql"
 
     # Use StringIO for high-speed in-memory string building
     f = io.StringIO()
@@ -595,14 +593,11 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
     f.write(
         "CREATE TABLE IF NOT EXISTS transactions (\n    transaction_id UUID PRIMARY KEY,\n    account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,\n    date TIMESTAMPTZ NOT NULL,\n    amount NUMERIC(10,2) NOT NULL,\n    currency VARCHAR(3) NOT NULL,\n    type VARCHAR(10) NOT NULL,\n    status VARCHAR(15) NOT NULL,\n    description VARCHAR,\n    merchant VARCHAR,\n    category VARCHAR\n);\n\n"
     )
-    f.write(
-        "CREATE TABLE IF NOT EXISTS stock_instruments (\n    id UUID PRIMARY KEY,\n    user_id VARCHAR(64) NOT NULL,\n    symbol VARCHAR(20) NOT NULL,\n    name VARCHAR(255),\n    quantity NUMERIC(18,6) NOT NULL DEFAULT 0,\n    average_buy_price NUMERIC(18,6),\n    current_price NUMERIC(18,6),\n    currency VARCHAR(10),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    CONSTRAINT uq_stock_instruments_user_id_id UNIQUE (user_id, id),\n    CONSTRAINT uq_stock_instruments_user_id_symbol UNIQUE (user_id, symbol)\n);\n\n"
-    )
 
     f.write(
         "CREATE INDEX IF NOT EXISTS ix_users_username ON users (username);\n"
         "CREATE INDEX IF NOT EXISTS ix_users_phonenumber ON users (phonenumber);\n"
-        "CREATE INDEX IF NOT EXISTS ix_stock_instruments_user_id ON stock_instruments (user_id);\n\n"
+        "\n"
     )
 
     f.write("-- 2) Insert persona (user + account)\n")
@@ -636,22 +631,7 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
             f"INSERT INTO accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('{user['id']}', '{acc['id']}', '{acc['bank']}', '{acc['mask']}', '{acc['type']}', {acc['balance']:.2f}) ON CONFLICT (account_id) DO NOTHING;\n"
         )
 
-    f.write("\n-- 3) STOCK HOLDINGS\n")
-    for symbol, name, quantity, avg_buy, current_price, currency in persona.get(
-        "stock_holdings", []
-    ):
-        write_stock_instrument(
-            f,
-            user["id"],
-            symbol,
-            name,
-            quantity,
-            avg_buy,
-            current_price,
-            currency,
-        )
-
-    f.write("\n-- 4) TRANSACTIONS (1 Year)\n")
+    f.write("\n-- 3) TRANSACTIONS (1 Year)\n")
 
     # --- Generate Transaction Loop ---
     current_date = start_date
@@ -660,15 +640,20 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
     # Build fast-lookup dicts for date-based events
     income_days = {day: rules for (day, *rules) in persona["income"]}
-    monthly_days = {day: rules for (day, *rules) in persona.get("regular_monthly", {})}
-    rare_dates = {date: rules for (date, *rules) in persona["rare_large_date_specific"]}
+    monthly_days = {day: rules for (day, *rules) in persona.get("regular_monthly", [])}
+    # Rare events repeat yearly by month-day unless a one-off date is explicitly outside range.
+    rare_dates = {
+        date[-5:]: rules for (date, *rules) in persona["rare_large_date_specific"]
+    }
 
     while current_date <= end_date:
-        date_str = current_date.strftime("%Y-%m-%d")
+        month_day_str = current_date.strftime("%m-%d")
 
         # 1. RARE & HUGE (Date Specific)
-        if date_str in rare_dates:
-            acc_key, cat, merch, desc, (min_amt, max_amt), type = rare_dates[date_str]
+        if month_day_str in rare_dates:
+            acc_key, cat, merch, desc, (min_amt, max_amt), type = rare_dates[
+                month_day_str
+            ]
             amt = random.uniform(min_amt, max_amt)
             transaction_count += write_transaction(
                 f,
@@ -751,17 +736,47 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
 # --- 3. RUN THE SCRIPT ---
 if __name__ == "__main__":
-
-    # --- CONFIGURATION ---
-    # *** CHANGE THIS to select your persona ***
-    SELECTED_PERSONA = (
-        "PRIYA_BANK_MANAGER"  # or "ROHAN_SOFTWARE_DEV", "BIKESH_KTM_STUDENT"
+    parser = argparse.ArgumentParser(
+        description="Generate realistic SQL transaction data for personas and years."
     )
-    START_DATE = datetime(2025, 1, 1)
-    END_DATE = datetime(2025, 12, 31)
-    # ---------------------
-
-    print(f"Generating 1-year data for persona: '{SELECTED_PERSONA}'...")
-    generate_sql_for_persona(
-        SELECTED_PERSONA, PERSONA_DEFINITIONS, START_DATE, END_DATE
+    parser.add_argument(
+        "--personas",
+        nargs="+",
+        default=["all"],
+        help="Persona keys to generate (or 'all').",
     )
+    parser.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=[2025],
+        help="Years to generate (e.g. 2024 2026).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Base random seed for deterministic generation.",
+    )
+    args = parser.parse_args()
+
+    if "all" in args.personas:
+        selected_personas = list(PERSONA_DEFINITIONS.keys())
+    else:
+        invalid = [p for p in args.personas if p not in PERSONA_DEFINITIONS]
+        if invalid:
+            raise ValueError(f"Invalid persona(s): {', '.join(invalid)}")
+        selected_personas = args.personas
+
+    for year in args.years:
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year, 12, 31)
+        for persona in selected_personas:
+            random.seed(f"{args.seed}:{persona}:{year}")
+            print(f"Generating data for {persona} in {year}...")
+            generate_sql_for_persona(
+                persona,
+                PERSONA_DEFINITIONS,
+                start_date,
+                end_date,
+            )

@@ -56,11 +56,14 @@ CREATE INDEX IF NOT EXISTS ix_stock_instruments_user_id ON stock_instruments (us
 INSERT INTO users (user_id, username, phonenumber, full_name, hashed_password, created_at) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'bikesh.maharjan', '9862606079', 'Bikesh Maharjan', '$2b$12$PsoHAtQzRQeGTzRGFj06ge64vKnjHRcIzmkJgTY3VouoMVTRO5Pyy', '2025-01-01T10:00:00Z') ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'b2a1c3d4-e5f6-7788-9900-aabbccddeeff', 'Nabil Bank', '**** 1234', 'Student Savings (Allowance)', 15000.00) ON CONFLICT (account_id) DO NOTHING;
 INSERT INTO accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'c3d4e5f6-a1b2-7788-9900-aabbccddeeff', 'eSewa Bank', '**** 5678', 'Freelancer (Gig Money)', 10000.00) ON CONFLICT (account_id) DO NOTHING;
+INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) VALUES ('a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'c3d4e5f6-a1b2-7788-9900-aabbccddeeff', 'CHCL', 'Chilime Hydropower Company Limited', 44.000000, 525.000000, 558.200000, 'NPR');
 
 -- 3) STOCK HOLDINGS
 INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) VALUES ('b8a669b8-dc34-4566-b0db-4d02be29703d', 'a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'NABIL', 'Nabil Bank Limited', 35.750000, 598.000000, 645.000000, 'NPR');
 INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) VALUES ('e2b4cf55-8188-4624-8163-1eb043e92c4b', 'a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'NICA', 'NIC Asia Bank Limited', 42.000000, 486.500000, 522.500000, 'NPR');
 INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) VALUES ('38d00df8-277b-406f-9fba-52fafd4815b0', 'a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'UPPER', 'Upper Tamakoshi Hydropower Limited', 80.000000, 305.000000, 332.400000, 'NPR');
+
+INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) VALUES ('f7e6d5c4-b3a2-1122-3344-556677889900', 'a1b2c3d4-e5f6-7788-9900-aabbccddeeff', 'NLIC', 'Nepal Life Insurance Company Limited', 50.000000, 900.000000, 950.000000, 'NPR');
 
 -- 4) TRANSACTIONS (1 Year)
 INSERT INTO transactions (transaction_id, account_id, date, amount, currency, type, status, description, merchant, category) VALUES ('cce7e01d-29ba-42f6-a75d-fbed4c8b5c7e', 'b2a1c3d4-e5f6-7788-9900-aabbccddeeff', '2025-01-01T11:51:21Z', 15000.00, 'NPR', 'CREDIT', 'COMPLETED', 'Monthly Allowance', 'Family', 'Income');

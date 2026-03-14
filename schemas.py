@@ -34,6 +34,7 @@ class TransactionCreate(TransactionBase):
 
 class Transaction(TransactionBase):
     transaction_id: UUID
+    is_new: bool = False
 
     class Config:
         from_attributes = True

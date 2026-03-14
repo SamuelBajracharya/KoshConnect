@@ -5,7 +5,7 @@ from typing import List
 from uuid import UUID
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import timedelta, timezone
+from datetime import timedelta, timezone, datetime
 from decimal import Decimal
 import models
 import schemas
@@ -58,6 +58,48 @@ MARKET_DUMMY_STOCKS = [
         "currency": "NPR",
     },
 ]
+
+
+def get_today_utc_end() -> datetime:
+    now_utc = datetime.now(timezone.utc)
+    return now_utc.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+def get_visible_transactions_query(db: Session):
+    return db.query(models.Transaction).filter(
+        models.Transaction.date <= get_today_utc_end()
+    )
+
+
+def _to_utc_date(value: datetime):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.date()
+
+
+def build_transaction_response(
+    transaction: models.Transaction, latest_visible_date
+) -> schemas.Transaction:
+    return schemas.Transaction(
+        transaction_id=transaction.transaction_id,
+        account_id=transaction.account_id,
+        date=transaction.date,
+        amount=float(transaction.amount),
+        currency=transaction.currency,
+        type=transaction.type,
+        status=transaction.status,
+        description=transaction.description,
+        merchant=transaction.merchant,
+        category=transaction.category,
+        is_new=_to_utc_date(transaction.date) == latest_visible_date,
+    )
+
+
+def build_transaction_list_response(transactions: List[models.Transaction]):
+    today_date = datetime.now(timezone.utc).date()
+    return [build_transaction_response(tx, today_date) for tx in transactions]
 
 
 def seed_stock_instruments(db: Session):
@@ -249,7 +291,23 @@ def get_account(
         raise HTTPException(
             status_code=403, detail="Not authorized to access this account"
         )
-    return db_account
+
+    visible_transactions = (
+        get_visible_transactions_query(db)
+        .filter(models.Transaction.account_id == db_account.account_id)
+        .order_by(models.Transaction.date.desc())
+        .all()
+    )
+
+    return schemas.AccountWithTransactions(
+        account_id=db_account.account_id,
+        user_id=db_account.user_id,
+        bank_name=db_account.bank_name,
+        account_number_masked=db_account.account_number_masked,
+        account_type=db_account.account_type,
+        balance=float(db_account.balance),
+        transactions=build_transaction_list_response(visible_transactions),
+    )
 
 
 @app.get(
@@ -269,7 +327,13 @@ def get_account_transactions(
         raise HTTPException(
             status_code=403, detail="Not authorized to access these transactions"
         )
-    return db_account.transactions
+    transactions = (
+        get_visible_transactions_query(db)
+        .filter(models.Transaction.account_id == db_account.account_id)
+        .order_by(models.Transaction.date.desc())
+        .all()
+    )
+    return build_transaction_list_response(transactions)
 
 
 # TRANSACTION ROUTES
@@ -280,7 +344,7 @@ def get_transaction(
     current_user: models.User = Depends(get_current_user),
 ):
     db_transaction = (
-        db.query(models.Transaction)
+        get_visible_transactions_query(db)
         .filter(models.Transaction.transaction_id == transaction_id)
         .first()
     )
@@ -290,7 +354,7 @@ def get_transaction(
         raise HTTPException(
             status_code=403, detail="Not authorized to access this transaction"
         )
-    return db_transaction
+    return build_transaction_response(db_transaction, datetime.now(timezone.utc).date())
 
 
 @app.get("/users/{user_id}/stocks", response_model=List[schemas.StockInstrument])
@@ -412,8 +476,14 @@ def add_transaction(
             status_code=403, detail="Not authorized to add transaction to this account"
         )
 
+    if transaction.date > get_today_utc_end():
+        raise HTTPException(
+            status_code=400,
+            detail="Transactions after today's date are not available via this API",
+        )
+
     db_transaction = models.Transaction(**transaction.dict())
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
-    return db_transaction
+    return build_transaction_response(db_transaction, datetime.now(timezone.utc).date())
