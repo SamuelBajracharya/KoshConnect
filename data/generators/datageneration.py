@@ -4,6 +4,40 @@ import uuid
 import io
 import time
 import argparse
+from pathlib import Path
+
+
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "sql"
+
+CATEGORY_METADATA = {
+    "Food": ("FOOD", 5812, "GIBL-FT-01"),
+    "Transport": ("TRAN", 4121, "GIBL-FT-02"),
+    "Utilities": ("UTIL", 4900, "GIBL-FT-03"),
+    "Groceries": ("GROC", 5411, "GIBL-FT-04"),
+    "Rent": ("RENT", 6513, "GIBL-FT-05"),
+    "Travel": ("TRVL", 4722, "GIBL-FT-06"),
+    "Shopping": ("SHOP", 5311, "GIBL-FT-07"),
+    "Entertainment": ("ENTR", 7832, "GIBL-FT-08"),
+    "Maintenance": ("MAIN", 7538, "GIBL-FT-09"),
+    "Income": ("INCM", 6012, "GIBL-FT-10"),
+}
+
+
+def infer_iso_fields(category):
+    return CATEGORY_METADATA.get(category, ("OTHR", 5999, "GIBL-FT-01"))
+
+
+def merchant_logo_url(merchant: str) -> str:
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in merchant)
+    slug = "-".join(part for part in slug.split("-") if part)
+    return f"https://cdn.mockbank.local/merchant-logos/{slug or 'unknown'}.png"
+
+
+def merchant_is_verified(merchant: str) -> bool:
+    unverified_hint = ["local", "trip", "agency"]
+    merchant_lower = merchant.lower()
+    return not any(token in merchant_lower for token in unverified_hint)
+
 
 # --- 1. DEFINE PERSONAS ---
 # This is the "brain" of the generator. You can add new personas here.
@@ -547,8 +581,12 @@ def write_transaction(
     desc_sql = desc.replace("'", "''")
     merchant_sql = merchant.replace("'", "''")
     transaction_id = str(uuid.uuid4())
+    purpose_code, mcc, proprietary_code = infer_iso_fields(category)
+    proprietary_code_sql = proprietary_code.replace("'", "''")
+    logo_sql = merchant_logo_url(merchant).replace("'", "''")
+    verified = "true" if merchant_is_verified(merchant) else "false"
     f.write(
-        f"INSERT INTO transactions (transaction_id, account_id, date, amount, currency, type, status, description, merchant, category) VALUES ('{transaction_id}', '{account_id}', '{date_str}', {amount_str}, 'NPR', '{type}', 'COMPLETED', '{desc_sql}', '{merchant_sql}', '{category}');\n"
+        f"INSERT INTO transactions (transaction_id, account_id, date, amount, currency, type, status, category_purpose_code, mcc, proprietary_bank_code, description, merchant, merchant_logo_url, merchant_verified_status, category) VALUES ('{transaction_id}', '{account_id}', '{date_str}', {amount_str}, 'NPR', '{type}', 'BOOKED', '{purpose_code}', {mcc}, '{proprietary_code_sql}', '{desc_sql}', '{merchant_sql}', '{logo_sql}', {verified}, '{category}');\n"
     )
     return 1  # Return 1 to count the transaction
 
@@ -571,9 +609,15 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
         and end_date.day == 31
         and start_date.year == end_date.year
     ):
-        output_file = f"{persona_name.lower()}_transactions_{start_date.year}.sql"
+        if start_date.year == 2025:
+            output_file = f"{persona_name.lower()}_transactions_1_year.sql"
+        else:
+            output_file = f"{persona_name.lower()}_transactions_{start_date.year}.sql"
     else:
         output_file = f"{persona_name.lower()}_transactions_{start_date:%Y%m%d}_{end_date:%Y%m%d}.sql"
+
+    output_path = OUTPUT_DIR / output_file
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Use StringIO for high-speed in-memory string building
     f = io.StringIO()
@@ -585,18 +629,26 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
     f.write("-- 1) CREATE TABLES\n")
     f.write(
-        "CREATE TABLE IF NOT EXISTS users (\n    user_id UUID PRIMARY KEY,\n    username VARCHAR NOT NULL UNIQUE,\n    phonenumber VARCHAR NOT NULL UNIQUE,\n    full_name VARCHAR NOT NULL,\n    hashed_password VARCHAR NOT NULL,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n"
+        "CREATE TABLE IF NOT EXISTS users (\n    user_id UUID PRIMARY KEY,\n    username VARCHAR NOT NULL UNIQUE,\n    phonenumber VARCHAR UNIQUE,\n    phonenumber_encrypted VARCHAR,\n    phonenumber_hash VARCHAR(64),\n    email_encrypted VARCHAR,\n    email_hash VARCHAR(64),\n    full_name VARCHAR NOT NULL,\n    role VARCHAR(30) NOT NULL DEFAULT 'customer',\n    hashed_password VARCHAR NOT NULL,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n"
     )
     f.write(
-        "CREATE TABLE IF NOT EXISTS accounts (\n    account_id UUID PRIMARY KEY,\n    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,\n    bank_name VARCHAR NOT NULL,\n    account_number_masked VARCHAR NOT NULL,\n    account_type VARCHAR NOT NULL,\n    balance NUMERIC(12,2) NOT NULL\n);\n\n"
+        "CREATE TABLE IF NOT EXISTS accounts (\n    account_id UUID PRIMARY KEY,\n    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,\n    bank_name VARCHAR NOT NULL,\n    account_number_masked VARCHAR NOT NULL,\n    account_number_encrypted VARCHAR,\n    account_number_hash VARCHAR(64),\n    account_type VARCHAR NOT NULL,\n    balance NUMERIC(12,2) NOT NULL\n);\n\n"
     )
     f.write(
-        "CREATE TABLE IF NOT EXISTS transactions (\n    transaction_id UUID PRIMARY KEY,\n    account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,\n    date TIMESTAMPTZ NOT NULL,\n    amount NUMERIC(10,2) NOT NULL,\n    currency VARCHAR(3) NOT NULL,\n    type VARCHAR(10) NOT NULL,\n    status VARCHAR(15) NOT NULL,\n    description VARCHAR,\n    merchant VARCHAR,\n    category VARCHAR\n);\n\n"
+        "CREATE TABLE IF NOT EXISTS transactions (\n    transaction_id UUID PRIMARY KEY,\n    account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,\n    date TIMESTAMPTZ NOT NULL,\n    amount NUMERIC(10,2) NOT NULL,\n    currency VARCHAR(3) NOT NULL,\n    type VARCHAR(10) NOT NULL,\n    status VARCHAR(15) NOT NULL,\n    category_purpose_code VARCHAR(4) NOT NULL DEFAULT 'OTHR',\n    mcc INTEGER NOT NULL DEFAULT 5999,\n    proprietary_bank_code VARCHAR(20) NOT NULL DEFAULT 'GIBL-FT-01',\n    description VARCHAR,\n    merchant VARCHAR,\n    merchant_logo_url VARCHAR,\n    merchant_verified_status BOOLEAN NOT NULL DEFAULT false,\n    category VARCHAR\n);\n\n"
+    )
+    f.write(
+        "CREATE TABLE IF NOT EXISTS stock_instruments (\n    id UUID PRIMARY KEY,\n    user_id VARCHAR(64) NOT NULL,\n    symbol VARCHAR(20) NOT NULL,\n    name VARCHAR(255),\n    quantity NUMERIC(18,6) NOT NULL DEFAULT 0,\n    average_buy_price NUMERIC(18,6),\n    current_price NUMERIC(18,6),\n    currency VARCHAR(10),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    CONSTRAINT uq_stock_instruments_user_id_id UNIQUE (user_id, id),\n    CONSTRAINT uq_stock_instruments_user_id_symbol UNIQUE (user_id, symbol)\n);\n\n"
+    )
+    f.write(
+        "CREATE TABLE IF NOT EXISTS idempotency_records (\n    id UUID PRIMARY KEY,\n    idempotency_key VARCHAR(128) NOT NULL UNIQUE,\n    endpoint VARCHAR(128) NOT NULL,\n    request_hash VARCHAR(64) NOT NULL,\n    response_status_code INTEGER NOT NULL,\n    response_body VARCHAR NOT NULL,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n"
     )
 
     f.write(
         "CREATE INDEX IF NOT EXISTS ix_users_username ON users (username);\n"
         "CREATE INDEX IF NOT EXISTS ix_users_phonenumber ON users (phonenumber);\n"
+        "CREATE INDEX IF NOT EXISTS ix_users_phonenumber_hash ON users (phonenumber_hash);\n"
+        "CREATE INDEX IF NOT EXISTS ix_stock_instruments_user_id ON stock_instruments (user_id);\n"
         "\n"
     )
 
@@ -617,7 +669,7 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
     )
 
     f.write(
-        f"INSERT INTO users (user_id, username, phonenumber, full_name, hashed_password, created_at) VALUES ('{user['id']}', '{username}', '{phonenumber}', '{user['name']}', '{hashed_password}', '{start_timestamp_str}') ON CONFLICT (user_id) DO NOTHING;\n"
+        f"INSERT INTO users (user_id, username, phonenumber, phonenumber_encrypted, phonenumber_hash, email_encrypted, email_hash, full_name, role, hashed_password, created_at) VALUES ('{user['id']}', '{username}', '{phonenumber}', NULL, NULL, NULL, NULL, '{user['name']}', 'customer', '{hashed_password}', '{start_timestamp_str}') ON CONFLICT (user_id) DO NOTHING;\n"
     )
     # -----------------------------
 
@@ -628,10 +680,19 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
     for acc in persona["accounts"]:
         f.write(
-            f"INSERT INTO accounts (user_id, account_id, bank_name, account_number_masked, account_type, balance) VALUES ('{user['id']}', '{acc['id']}', '{acc['bank']}', '{acc['mask']}', '{acc['type']}', {acc['balance']:.2f}) ON CONFLICT (account_id) DO NOTHING;\n"
+            f"INSERT INTO accounts (user_id, account_id, bank_name, account_number_masked, account_number_encrypted, account_number_hash, account_type, balance) VALUES ('{user['id']}', '{acc['id']}', '{acc['bank']}', '{acc['mask']}', NULL, NULL, '{acc['type']}', {acc['balance']:.2f}) ON CONFLICT (account_id) DO NOTHING;\n"
         )
 
-    f.write("\n-- 3) TRANSACTIONS (1 Year)\n")
+    f.write("\n-- 3) STOCK HOLDINGS\n")
+    for symbol, name, quantity, avg_buy, current_price, currency in persona.get(
+        "stock_holdings", []
+    ):
+        stock_id = str(uuid.uuid4())
+        f.write(
+            f"INSERT INTO stock_instruments (id, user_id, symbol, name, quantity, average_buy_price, current_price, currency) VALUES ('{stock_id}', '{user['id']}', '{symbol}', '{name}', {quantity:.6f}, {avg_buy:.6f}, {current_price:.6f}, '{currency}') ON CONFLICT (user_id, symbol) DO NOTHING;\n"
+        )
+
+    f.write("\n-- 4) TRANSACTIONS (1 Year)\n")
 
     # --- Generate Transaction Loop ---
     current_date = start_date
@@ -716,7 +777,7 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
 
     # --- 5. Write to File ---
     try:
-        with open(output_file, "w", encoding="utf-8") as sql_file:
+        with open(output_path, "w", encoding="utf-8") as sql_file:
             sql_file.write(f.getvalue())
 
         end_time = time.time()
@@ -725,7 +786,7 @@ def generate_sql_for_persona(persona_name, definitions, start_date, end_date):
         print(
             f"\nSuccess! \nGenerated {transaction_count} transactions for '{persona_name}' over {day_count} days."
         )
-        print(f"File saved as: {output_file}")
+        print(f"File saved as: {output_path}")
         print(f"Generation took: {duration:.4f} seconds.")
 
     except Exception as e:

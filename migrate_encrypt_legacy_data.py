@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 import models
-from database import SessionLocal
+from database import SessionLocal, run_bootstrap_migrations
 from encryption_service import (
     encrypt,
     stable_hash,
@@ -21,7 +21,8 @@ def migrate_users(db: Session) -> int:
                 user.phonenumber, aad=f"user_phone:{user.user_id}"
             )
             user.phonenumber_hash = stable_hash(user.phonenumber)
-            user.phonenumber = None
+            # Keep plaintext temporarily for compatibility with legacy schemas.
+            # You can null this field in a later cleanup after verifying constraints.
             changed = True
 
         if changed:
@@ -39,11 +40,14 @@ def migrate_accounts(db: Session) -> int:
         # Legacy rows may only have masked values. We avoid attempting to reconstruct
         # real account numbers; we simply encrypt what is available.
         if not account.account_number_encrypted and account.account_number_masked:
+            # Legacy imports often contain only masked numbers like '**' or '****'.
+            # Use a per-account deterministic hash to avoid collisions on unique index.
+            legacy_hash_input = f"{account.account_id}:{account.account_number_masked}"
             account.account_number_encrypted = encrypt(
                 account.account_number_masked,
                 aad=f"account_number:{account.account_id}",
             )
-            account.account_number_hash = stable_hash(account.account_number_masked)
+            account.account_number_hash = stable_hash(legacy_hash_input)
             account.account_number_masked = mask_account_number(
                 account.account_number_masked
             )
@@ -65,6 +69,9 @@ def migrate_accounts(db: Session) -> int:
 
 
 def run_migration():
+    # Ensure legacy databases get required columns before ORM loads mapped fields.
+    run_bootstrap_migrations()
+
     db = SessionLocal()
     try:
         user_count = migrate_users(db)

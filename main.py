@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 import models
 from config import APP_ENV, ENFORCE_HTTPS
-from database import SessionLocal, engine
+from database import SessionLocal, engine, run_bootstrap_migrations
 from endpoints import api_router
 from services import seed_stock_instruments
 
@@ -15,6 +15,7 @@ from services import seed_stock_instruments
 async def lifespan(app: FastAPI):
     print("Creating database tables (if not exist)...")
     models.Base.metadata.create_all(bind=engine)
+    run_bootstrap_migrations()
     print("Tables ready!")
 
     db = SessionLocal()
