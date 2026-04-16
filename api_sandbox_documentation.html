@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nepal Banking Sandbox API Documentation</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #10233a;
+      --muted: #5d728a;
+      --brand: #005f73;
+      --accent: #ca6702;
+      --line: #d9e3ef;
+      --ok: #1f8f5f;
+      --warn: #b65e00;
+      --code-bg: #0d1b2a;
+      --code-ink: #dbe7f5;
+      --pill-get: #005f73;
+      --pill-post: #ca6702;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(0, 95, 115, 0.1), transparent 45%),
+        radial-gradient(circle at 85% 10%, rgba(202, 103, 2, 0.1), transparent 35%),
+        var(--bg);
+      line-height: 1.55;
+    }
+
+    .layout {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(16, 35, 58, 0.06);
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .sidebar a {
+      display: block;
+      text-decoration: none;
+      color: var(--ink);
+      font-size: 0.92rem;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .sidebar a:hover {
+      background: #eef3f9;
+    }
+
+    .content {
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #005f73, #0a9396 65%, #94d2bd);
+      border-radius: 14px;
+      color: #fff;
+      padding: 22px;
+      box-shadow: 0 12px 28px rgba(16, 35, 58, 0.15);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: 0.2px;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      opacity: 0.95;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(16, 35, 58, 0.06);
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+    }
+
+    .endpoint {
+      border-top: 1px dashed var(--line);
+      padding-top: 16px;
+      margin-top: 16px;
+    }
+
+    .endpoint:first-child {
+      border-top: 0;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    .method {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 54px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      margin-right: 8px;
+    }
+
+    .method.get { background: var(--pill-get); }
+    .method.post { background: var(--pill-post); }
+
+    .path {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    .hint {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border-left: 4px solid var(--accent);
+      background: #fff7ef;
+      border-radius: 8px;
+      font-size: 0.92rem;
+    }
+
+    .hint.ok {
+      border-left-color: var(--ok);
+      background: #eefbf5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    h3 {
+      margin: 10px 0 6px;
+      font-size: 0.98rem;
+    }
+
+    pre {
+      margin: 0;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 12px;
+      border-radius: 10px;
+      overflow: auto;
+      font-size: 0.84rem;
+      line-height: 1.45;
+      border: 1px solid rgba(219, 231, 245, 0.15);
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: static;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Contents</h2>
+      <a href="#overview">Overview</a>
+      <a href="#auth-model">Authentication Model</a>
+      <a href="#headers">Bank Security Headers</a>
+      <a href="#errors">Problem Details (RFC 7807)</a>
+      <a href="#auth-routes">Authentication Routes</a>
+      <a href="#user-routes">User Routes</a>
+      <a href="#account-routes">Account Routes</a>
+      <a href="#transaction-routes">Transaction Routes</a>
+      <a href="#stock-routes">Stock Routes</a>
+      <a href="#iso-guidance">ISO 20022 Mapping Guidance</a>
+      <a href="#sample-signature">Signature Generation Example</a>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="overview">
+        <h1>Third-Party Banking Sandbox API</h1>
+        <p>
+          Production-style mock banking API suitable for white-label fintech integration in Nepal.
+          Includes OAuth2 bearer authentication, scoped access, secure request header standards,
+          account and transaction retrieval, and investment endpoints.
+        </p>
+      </section>
+
+      <section class="card" id="auth-model">
+        <h2 class="section-title">Authentication Model</h2>
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Value</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Token Endpoint</td><td>POST /token</td></tr>
+            <tr><td>Token Type</td><td>Bearer JWT</td></tr>
+            <tr><td>Subject Claim</td><td>Phone number</td></tr>
+            <tr><td>Default Expiry</td><td>10080 minutes</td></tr>
+            <tr><td>Scopes</td><td>account:read, transaction:read, transaction:write, stock:read</td></tr>
+          </tbody>
+        </table>
+        <div class="hint ok">
+          Protected endpoints require Authorization header: Bearer &lt;access_token&gt;
+        </div>
+      </section>
+
+      <section class="card" id="headers">
+        <h2 class="section-title">Bank Security Headers</h2>
+        <table>
+          <thead>
+            <tr><th>Header</th><th>Required</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Authorization</td><td>Yes for protected routes</td><td>Bearer JWT access token</td></tr>
+            <tr><td>X-Request-ID</td><td>Required for signed write operations</td><td>Unique request UUID for traceability</td></tr>
+            <tr><td>X-Bank-Signature</td><td>Required for signed write operations</td><td>HMAC SHA-256 signature over request_id.raw_body</td></tr>
+            <tr><td>X-Idempotency-Key</td><td>Required for payment-like transaction POSTs</td><td>Prevents duplicate write execution</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" id="errors">
+        <h2 class="section-title">Problem Details (RFC 7807)</h2>
+        <p class="meta">Recommended error envelope for all production-facing failures.</p>
+        <pre><code>{
+  "type": "insufficient_funds",
+  "title": "Balance too low",
+  "status": 403,
+  "detail": "Requested debit NPR 25000.00 exceeds available balance NPR 12000.00",
+  "instance": "/transactions/",
+  "request_id": "1c9fb11a-271f-4f6d-a2c2-7fce35d7b1a2"
+}</code></pre>
+      </section>
+
+      <section class="card" id="auth-routes">
+        <h2 class="section-title">Authentication Routes</h2>
+
+        <article class="endpoint">
+          <div><span class="method post">POST</span><span class="path">/token</span></div>
+          <p class="meta">Issue access token using phone number and password.</p>
+          <div class="grid">
+            <div>
+              <h3>Request (form data)</h3>
+              <pre><code>username=9862606079
+password=Pass@1234</code></pre>
+            </div>
+            <div>
+              <h3>Success 200</h3>
+              <pre><code>{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI...",
+  "token_type": "bearer",
+  "accounts": [
+    {
+      "user_id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
+      "bank_name": "Nabil Bank",
+      "account_number_masked": "****1234",
+      "account_type": "Student Savings (Allowance)",
+      "balance": 15000.0,
+      "account_id": "b2a1c3d4-e5f6-7788-9900-aabbccddeeff"
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card" id="user-routes">
+        <h2 class="section-title">User Routes</h2>
+
+        <article class="endpoint">
+          <div><span class="method post">POST</span><span class="path">/users/</span></div>
+          <p class="meta">Register a new user profile.</p>
+          <div class="grid">
+            <div>
+              <h3>Request JSON</h3>
+              <pre><code>{
+  "username": "priya.shrestha",
+  "phonenumber": "9839281334",
+  "full_name": "Priya Shrestha",
+  "password": "StrongPass#2026"
+}</code></pre>
+            </div>
+            <div>
+              <h3>Success 200</h3>
+              <pre><code>{
+  "user_id": "d1e2f3a4-b5c6-47d8-a9b0-c1d2e3f4a5b6",
+  "username": "priya.shrestha",
+  "phonenumber": "9839281334",
+  "full_name": "Priya Shrestha",
+  "created_at": "2026-04-16T12:20:31.221Z",
+  "accounts": []
+}</code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/users/me/</span></div>
+          <p class="meta">Get currently authenticated user.</p>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/users/{user_id}</span></div>
+          <p class="meta">Get specific user profile by UUID.</p>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/users/{user_id}/accounts</span></div>
+          <p class="meta">Get all accounts for a user, ownership validated.</p>
+        </article>
+      </section>
+
+      <section class="card" id="account-routes">
+        <h2 class="section-title">Account Routes</h2>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/accounts/{account_id}</span></div>
+          <p class="meta">Account details with visible transaction history.</p>
+          <div class="grid">
+            <div>
+              <h3>Success 200</h3>
+              <pre><code>{
+  "account_id": "b2a1c3d4-e5f6-7788-9900-aabbccddeeff",
+  "user_id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
+  "bank_name": "Nabil Bank",
+  "account_number_masked": "**** 1234",
+  "account_type": "Student Savings (Allowance)",
+  "balance": 15000.0,
+  "transactions": [
+    {
+      "transaction_id": "41cf5cb9-3f1f-45fb-96c2-5f9d6c2ac8a1",
+      "account_id": "b2a1c3d4-e5f6-7788-9900-aabbccddeeff",
+      "date": "2026-04-16T10:45:16Z",
+      "amount": 225.5,
+      "currency": "NPR",
+      "type": "DEBIT",
+      "status": "BOOKED",
+      "description": "Daily Khaja",
+      "merchant": "College Canteen",
+      "category": "Food",
+      "is_new": true
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/accounts/{account_id}/transactions</span></div>
+          <p class="meta">Fetch only account transaction collection.</p>
+        </article>
+      </section>
+
+      <section class="card" id="transaction-routes">
+        <h2 class="section-title">Transaction Routes</h2>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/transactions/{transaction_id}</span></div>
+          <p class="meta">Get one transaction by UUID.</p>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method post">POST</span><span class="path">/transactions/</span></div>
+          <p class="meta">Create a transaction. Intended to be protected with request signing and idempotency.</p>
+          <div class="hint">
+            Recommended headers for bank-grade write simulation: Authorization, X-Request-ID, X-Bank-Signature, X-Idempotency-Key.
+          </div>
+          <div class="grid">
+            <div>
+              <h3>Request JSON</h3>
+              <pre><code>{
+  "account_id": "b2a1c3d4-e5f6-7788-9900-aabbccddeeff",
+  "date": "2026-04-16T10:45:16Z",
+  "amount": 1500.00,
+  "currency": "NPR",
+  "type": "DEBIT",
+  "status": "BOOKED",
+  "description": "Monthly Rent",
+  "merchant": "KTM Homes",
+  "category": "Housing"
+}</code></pre>
+            </div>
+            <div>
+              <h3>Success 200</h3>
+              <pre><code>{
+  "transaction_id": "7f4ef868-d35d-4a44-a8eb-3f0bc77f7a21",
+  "account_id": "b2a1c3d4-e5f6-7788-9900-aabbccddeeff",
+  "date": "2026-04-16T10:45:16Z",
+  "amount": 1500.0,
+  "currency": "NPR",
+  "type": "DEBIT",
+  "status": "BOOKED",
+  "description": "Monthly Rent",
+  "merchant": "KTM Homes",
+  "category": "Housing",
+  "is_new": true
+}</code></pre>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card" id="stock-routes">
+        <h2 class="section-title">Stock Routes</h2>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/users/{user_id}/stocks</span></div>
+          <p class="meta">Returns user stock instruments based on ownership.</p>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method post">POST</span><span class="path">/stocks/</span></div>
+          <p class="meta">Create user stock instrument mapping.</p>
+          <div class="grid">
+            <div>
+              <h3>Request JSON</h3>
+              <pre><code>{
+  "user_id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
+  "symbol": "NABIL",
+  "name": "Nabil Bank Limited",
+  "quantity": 8.5,
+  "average_buy_price": 612.0,
+  "current_price": 645.0,
+  "currency": "NPR"
+}</code></pre>
+            </div>
+            <div>
+              <h3>Success 200</h3>
+              <pre><code>{
+  "id": "951a62e4-faa2-4a59-b8bf-497ebd7e2ef1",
+  "user_id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
+  "symbol": "NABIL",
+  "name": "Nabil Bank Limited",
+  "quantity": 8.5,
+  "average_buy_price": 612.0,
+  "current_price": 645.0,
+  "currency": "NPR",
+  "updated_at": "2026-04-16T12:34:19.122Z",
+  "created_at": "2026-04-16T12:34:19.122Z"
+}</code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="endpoint">
+          <div><span class="method get">GET</span><span class="path">/stock-instruments</span></div>
+          <p class="meta">Compact stock response shape for current authenticated user.</p>
+          <div class="grid">
+            <div>
+              <h3>Success 200</h3>
+              <pre><code>{
+  "stock_instruments": [
+    {
+      "instrument_id": "951a62e4-faa2-4a59-b8bf-497ebd7e2ef1",
+      "symbol": "NABIL",
+      "name": "Nabil Bank Limited",
+      "quantity": 8.5,
+      "average_buy_price": 612.0,
+      "current_price": 645.0,
+      "currency": "NPR",
+      "updated_at": "2026-04-16T12:34:19Z"
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card" id="iso-guidance">
+        <h2 class="section-title">ISO 20022 Mapping Guidance</h2>
+        <p class="meta">Use these fields in the next schema revision for camt.053-aligned transaction enrichment.</p>
+        <table>
+          <thead>
+            <tr><th>Field</th><th>Meaning</th><th>Example</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>category_purpose_code</td><td>4-letter purpose code</td><td>RENT, GROC, HLTH, EDUC</td></tr>
+            <tr><td>mcc</td><td>Merchant Category Code</td><td>5812</td></tr>
+            <tr><td>status</td><td>Booking status</td><td>BOOKED, PENDING, REJECTED</td></tr>
+            <tr><td>proprietary_bank_code</td><td>Bank-specific internal flow code</td><td>GIBL-FT-01</td></tr>
+            <tr><td>merchant_details</td><td>Enriched merchant object</td><td>{"name":"KTM Homes","logo_url":"https://...","verified_status":true}</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" id="sample-signature">
+        <h2 class="section-title">Signature Generation Example (Python)</h2>
+        <pre><code>import hashlib
+import hmac
+import json
+
+secret = "bank-signing-secret"
+request_id = "1c9fb11a-271f-4f6d-a2c2-7fce35d7b1a2"
+payload = {
+    "account_id": "b2a1c3d4-e5f6-7788-9900-aabbccddeeff",
+    "amount": 1500.0,
+    "currency": "NPR",
+    "type": "DEBIT"
+}
+
+raw_body = json.dumps(payload, separators=(",", ":"), sort_keys=False).encode("utf-8")
+message = request_id.encode("utf-8") + b"." + raw_body
+signature = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+print("X-Request-ID:", request_id)
+print("X-Bank-Signature:", signature)</code></pre>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Deployment Notes</h2>
+        <ul>
+          <li>Recommended base URL for local docs testing: http://localhost:8000</li>
+          <li>Protect secret material through environment variables only.</li>
+          <li>Use a reverse proxy and API gateway in non-local environments.</li>
+          <li>Persist idempotency keys with TTL for transaction create endpoints.</li>
+        </ul>
+        <p class="footer-note">
+          Document version: v1.0 sandbox reference. Generated for internal and partner-integration use.
+        </p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
