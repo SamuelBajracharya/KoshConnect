@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from schemas.account import Account
 
 
 class Token(BaseModel):
@@ -13,4 +14,4 @@ class TokenData(BaseModel):
 
 
 class LoginResponse(Token):
-    accounts: list = Field(default_factory=list)
+    accounts: List[Account] = Field(default_factory=list)

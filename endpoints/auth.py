@@ -49,8 +49,9 @@ async def login_for_access_token(
         scopes=["account:read", "transaction:read", "transaction:write", "stock:read"],
         expires_delta=access_token_expires,
     )
+    accounts = [schemas.Account.model_validate(account) for account in user.accounts]
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "accounts": user.accounts,
+        "accounts": accounts,
     }
