@@ -38,7 +38,13 @@ def build_scope_claim(scopes: Optional[Iterable[str]]) -> str:
 
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    if not hashed_password:
+        return False
+    try:
+        # Tolerate accidental whitespace/newlines in stored hashes.
+        return pwd_context.verify(plain_password, hashed_password.strip())
+    except (ValueError, TypeError):
+        return False
 
 
 def get_password_hash(password):
